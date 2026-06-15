@@ -1,0 +1,51 @@
+{
+    "name": "Shadowrocket Mieru 支持",
+    "code": "shadowrocket_mieru",
+    "version": "1.0.1",
+    "description": "为 Shadowrocket 订阅追加 Mieru 节点下发支持。",
+    "author": "妖月",
+    "type": "feature",
+    "require": {
+        "xboard": ">=1.0.0"
+    },
+    "config": {
+        "enabled": {
+            "type": "boolean",
+            "default": true,
+            "label": "启用功能",
+            "description": "开启后，Shadowrocket 订阅会追加 Mieru 节点。"
+        },
+        "profile": {
+            "type": "string",
+            "default": "",
+            "label": "Mieru Profile",
+            "placeholder": "留空时使用节点名称",
+            "description": "生成 mierus:// 简单分享链接时使用的 profile 参数。Shadowrocket 会把 profile 显示为节点名称。"
+        },
+        "use_node_name_as_profile": {
+            "type": "boolean",
+            "default": true,
+            "label": "使用节点名作为 Profile",
+            "description": "建议开启。开启后每个 Mieru 节点会在 Shadowrocket 中显示自己的节点名称，而不是统一显示为 default。"
+        },
+        "multiplexing": {
+            "type": "string",
+            "default": "",
+            "label": "Multiplexing",
+            "placeholder": "留空、OFF、LOW、MIDDLE、HIGH",
+            "description": "可选。留空则不下发 multiplexing 参数。"
+        },
+        "skip_when_core_supported": {
+            "type": "boolean",
+            "default": true,
+            "label": "核心已支持时跳过",
+            "description": "如果后续 Xboard 原生支持 Shadowrocket Mieru 下发，插件将自动不接管订阅。"
+        },
+        "log_hits": {
+            "type": "boolean",
+            "default": false,
+            "label": "记录命中日志",
+            "description": "开启后，每次为 Shadowrocket 追加 Mieru 节点都会写入日志。"
+        }
+    }
+}
