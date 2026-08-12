@@ -14,6 +14,13 @@ use Illuminate\Support\Facades\Log;
 
 class Plugin extends AbstractPlugin
 {
+    private const INFO_NODE_PORTS = [
+        'remaining_traffic' => 65535,
+        'reset_day' => 65534,
+        'expired_date' => 65533,
+        'filtered_count' => 65532,
+    ];
+
     private const SHADOWROCKET_TYPES = [
         Server::TYPE_SHADOWSOCKS,
         Server::TYPE_VMESS,
@@ -58,7 +65,13 @@ class Plugin extends AbstractPlugin
 
         $servers = ServerService::getAvailableServers($user);
         $servers = HookManager::filter('client.subscribe.servers', $servers, $user, $request);
+        $availableServerCount = count($servers);
         $servers = $this->filterServers($servers, $request);
+        $this->addSubscribeInfoToServers(
+            $servers,
+            $user,
+            $availableServerCount - count($servers)
+        );
 
         $mieruServers = array_values(array_filter(
             $servers,
@@ -99,6 +112,68 @@ class Plugin extends AbstractPlugin
         $flag = strtolower((string) ($request->input('flag') ?: $request->header('User-Agent', '')));
 
         return str_contains($flag, 'shadowrocket');
+    }
+
+    /**
+     * The plugin intercepts the request before ClientController can add these
+     * informational nodes, so mirror the controller behavior here.
+     */
+    private function addSubscribeInfoToServers(array &$servers, $user, int $rejectedServerCount = 0): void
+    {
+        $template = collect($servers)->first(
+            static fn(array $server): bool => ($server['type'] ?? null) !== Server::TYPE_MIERU
+        );
+        if (!$template) {
+            return;
+        }
+
+        if ($rejectedServerCount > 0) {
+            array_unshift($servers, $this->buildInfoServer(
+                $template,
+                "过滤掉{$rejectedServerCount}条线路",
+                self::INFO_NODE_PORTS['filtered_count']
+            ));
+        }
+
+        if (!(int) admin_setting('show_info_to_server_enable', 0)) {
+            return;
+        }
+
+        $usedTraffic = ($user['u'] ?? 0) + ($user['d'] ?? 0);
+        $remainingTraffic = Helper::trafficConvert(($user['transfer_enable'] ?? 0) - $usedTraffic);
+        $expiredDate = $user['expired_at']
+            ? date('Y-m-d', $user['expired_at'])
+            : __('长期有效');
+        $resetDay = (new UserService())->getResetDay($user);
+
+        array_unshift($servers, $this->buildInfoServer(
+            $template,
+            "套餐到期：{$expiredDate}",
+            self::INFO_NODE_PORTS['expired_date']
+        ));
+
+        if ($resetDay) {
+            array_unshift($servers, $this->buildInfoServer(
+                $template,
+                "距离下次重置剩余：{$resetDay} 天",
+                self::INFO_NODE_PORTS['reset_day']
+            ));
+        }
+
+        array_unshift($servers, $this->buildInfoServer(
+            $template,
+            "剩余流量：{$remainingTraffic}",
+            self::INFO_NODE_PORTS['remaining_traffic']
+        ));
+    }
+
+    private function buildInfoServer(array $template, string $name, int $port): array
+    {
+        unset($template['ports']);
+        $template['name'] = $name;
+        $template['port'] = $port;
+
+        return $template;
     }
 
     private function buildShadowrocketBody($user, array $servers, Request $request): string

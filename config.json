@@ -1,7 +1,7 @@
 {
     "name": "Shadowrocket Mieru 支持",
     "code": "shadowrocket_mieru",
-    "version": "1.0.1",
+    "version": "1.0.3",
     "description": "为 Shadowrocket 订阅追加 Mieru 节点下发支持。",
     "author": "妖月",
     "type": "feature",
